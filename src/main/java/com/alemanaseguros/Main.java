@@ -25,7 +25,7 @@ public class Main {
                 Logger.log("Obtained document content for ID: " + document.getId());
                 System.out.println("Obtained document content for ID: \n");
                 
-                boolean isUploaded = AlfrescoService.uploadDocument(base64Document, document.getFilePath());
+                boolean isUploaded = AlfrescoService.uploadDocument(base64Document, document.getDocumentoNombre(), document.getSpcSolRutTitular(), document.getSpcSolSinNpoliza(), document.getDocumentoTipoSolicitud(), document.getDocumentoTipoArchivo());
                 if (isUploaded) {
                     Logger.log("Uploaded document ID: " + document.getId());
                     System.out.println("Uploaded document ID \n");

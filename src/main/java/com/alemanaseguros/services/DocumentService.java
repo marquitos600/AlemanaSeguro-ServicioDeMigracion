@@ -9,6 +9,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URI;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 
@@ -64,7 +66,14 @@ public class DocumentService {
             throw new Exception("Failed to obtain document content");
         }
 
-        return response.body(); // Assuming the response body contains the base64 content
+        // Extraer el valor de 'accessToken' manualmente usando regex
+        Pattern pattern = Pattern.compile("\"archivoBase64\":\"(.*?)\"");
+        Matcher matcher = pattern.matcher(response.body());
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            throw new Exception("accessToken not found in response");
+        }
     }
 
     public static void setDocumentProcessed(String documentId, String filePath) throws Exception {
