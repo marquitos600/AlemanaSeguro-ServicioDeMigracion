@@ -1,23 +1,25 @@
 package com.alemanaseguros.services;
 
+import com.alemanaseguros.models.Path;
 import com.alemanaseguros.utils.PropertiesLoader;
-import com.alemanaseguros.utils.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.ByteArrayOutputStream;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class AlfrescoService {
-    public static boolean uploadDocument(String base64Content, String nameFile, String rut, String nPoliza, String tipoSolicitud, String tipoArchivo) throws Exception {
+    public static String uploadDocument(String base64Content, String nameFile, String rut, String nPoliza, String tipoSolicitud, String tipoArchivo) throws Exception {
         var properties = PropertiesLoader.loadProperties();
         String url = properties.getProperty("alfresco.upload.url").replace("/share/", "/alfresco/service/cargaALE/masiva");
         String username = properties.getProperty("alfresco.username");
         String password = properties.getProperty("alfresco.password");
 
-        String credentials = Base64.getEncoder().encodeToString((username + ":" + password).getBytes(Charset.forName("UTF-8")));
+        String credentials = Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
 
         // Decodificar el contenido base64 a bytes
         byte[] fileBytes = Base64.getDecoder().decode(base64Content);
@@ -27,74 +29,76 @@ public class AlfrescoService {
         String lineSeparator = "\r\n";
 
         // Construir el cuerpo de la solicitud multipart
-        StringBuilder bodyBuilder = new StringBuilder();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         // nombre_archivo
-        bodyBuilder.append("--").append(boundary).append(lineSeparator);
-        bodyBuilder.append("Content-Disposition: form-data; name=\"nombre_archivo\"").append(lineSeparator);
-        bodyBuilder.append(lineSeparator);
-        bodyBuilder.append(nameFile).append(lineSeparator);
+        outputStream.write(("--" + boundary + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Disposition: form-data; name=\"nombre_archivo\"" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
+        outputStream.write((nameFile + lineSeparator).getBytes(StandardCharsets.UTF_8));
 
         // file (contenido binario)
-        bodyBuilder.append("--").append(boundary).append(lineSeparator);
-        bodyBuilder.append("Content-Disposition: form-data; name=\"file\"; filename=\"").append(nameFile).append("\"").append(lineSeparator);
-        bodyBuilder.append("Content-Type: application/octet-stream").append(lineSeparator);
-        bodyBuilder.append(lineSeparator);
-
-        // Construir la parte binaria (archivo)
-        byte[] bodyPrefix = bodyBuilder.toString().getBytes(Charset.forName("UTF-8"));
-        byte[] bodySuffix = (lineSeparator + "--" + boundary + "--" + lineSeparator).getBytes(Charset.forName("UTF-8"));
-
-        byte[] requestBody = new byte[bodyPrefix.length + fileBytes.length + bodySuffix.length];
-        System.arraycopy(bodyPrefix, 0, requestBody, 0, bodyPrefix.length);
-        System.arraycopy(fileBytes, 0, requestBody, bodyPrefix.length, fileBytes.length);
-        System.arraycopy(bodySuffix, 0, requestBody, bodyPrefix.length + fileBytes.length, bodySuffix.length);
+        outputStream.write(("--" + boundary + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Disposition: form-data; name=\"file\"; filename=\"" + nameFile + "\"" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Type: application/octet-stream" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
+        outputStream.write(fileBytes);
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
 
         // rut_titular
-        bodyBuilder.setLength(0);
-        bodyBuilder.append("--").append(boundary).append(lineSeparator);
-        bodyBuilder.append("Content-Disposition: form-data; name=\"rut_titular\"").append(lineSeparator);
-        bodyBuilder.append(lineSeparator);
-        bodyBuilder.append("12345678-9").append(lineSeparator);
+        outputStream.write(("--" + boundary + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Disposition: form-data; name=\"rut_titular\"" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
+        outputStream.write((rut + lineSeparator).getBytes(StandardCharsets.UTF_8));
 
         // numero_poliza
-        bodyBuilder.append("--").append(boundary).append(lineSeparator);
-        bodyBuilder.append("Content-Disposition: form-data; name=\"numero_poliza\"").append(lineSeparator);
-        bodyBuilder.append(lineSeparator);
-        bodyBuilder.append("123").append(lineSeparator);
+        outputStream.write(("--" + boundary + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Disposition: form-data; name=\"numero_poliza\"" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
+        outputStream.write((nPoliza + lineSeparator).getBytes(StandardCharsets.UTF_8));
 
         // tipo_solicitud
-        bodyBuilder.append("--").append(boundary).append(lineSeparator);
-        bodyBuilder.append("Content-Disposition: form-data; name=\"tipo_solicitud\"").append(lineSeparator);
-        bodyBuilder.append(lineSeparator);
-        bodyBuilder.append("Siniestro").append(lineSeparator);
+        outputStream.write(("--" + boundary + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Disposition: form-data; name=\"tipo_solicitud\"" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
+        outputStream.write((tipoSolicitud + lineSeparator).getBytes(StandardCharsets.UTF_8));
 
         // tipo_archivo
-        bodyBuilder.append("--").append(boundary).append(lineSeparator);
-        bodyBuilder.append("Content-Disposition: form-data; name=\"tipo_archivo\"").append(lineSeparator);
-        bodyBuilder.append(lineSeparator);
-        bodyBuilder.append("prueba").append(lineSeparator);
+        outputStream.write(("--" + boundary + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(("Content-Disposition: form-data; name=\"tipo_archivo\"" + lineSeparator).getBytes(StandardCharsets.UTF_8));
+        outputStream.write(lineSeparator.getBytes(StandardCharsets.UTF_8));
+        outputStream.write((tipoArchivo + lineSeparator).getBytes(StandardCharsets.UTF_8));
 
-        // Completar el cuerpo de la solicitud
-        byte[] textPartBytes = bodyBuilder.toString().getBytes(Charset.forName("UTF-8"));
-        byte[] finalRequestBody = new byte[requestBody.length + textPartBytes.length];
-        System.arraycopy(requestBody, 0, finalRequestBody, 0, requestBody.length);
-        System.arraycopy(textPartBytes, 0, finalRequestBody, requestBody.length, textPartBytes.length);
+        // Terminar el cuerpo
+        outputStream.write(("--" + boundary + "--" + lineSeparator).getBytes(StandardCharsets.UTF_8));
 
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(new URI(url))
                 .header("Authorization", "Basic " + credentials)
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .POST(HttpRequest.BodyPublishers.ofByteArray(finalRequestBody))
+                .POST(HttpRequest.BodyPublishers.ofByteArray(outputStream.toByteArray()))
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+
+
+        // Supongamos que ya tienes la respuesta en 'response.body()'
+        String responseBody = response.body();
+
+
+        // Crear un ObjectMapper de Jackson
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // Convertir la respuesta JSON a un objeto Java
+        Path myPath = objectMapper.readValue(responseBody, Path.class);
+
 
         if (response.statusCode() != 200) {
             throw new Exception("Failed to upload document to Alfresco: " + response.body());
         }
 
-        return true;
+        return myPath.getPath();
     }
 }

@@ -6,36 +6,51 @@ import com.alemanaseguros.services.AlfrescoService;
 import com.alemanaseguros.utils.Logger;
 import com.alemanaseguros.utils.PropertiesLoader;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.Objects;
+
 public class Main {
     public static void main(String[] args) {
         System.out.println("inicio \n");
+
+        // Crear una instancia de LocalDateTime
+        LocalDateTime now = LocalDateTime.now();
+
+        // Definir el formato deseado para la fecha
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        // Convertir la fecha a cadena
+        String dateString = now.format(formatter);
+
+        // Reemplazar caracteres no válidos en el nombre del archivo
+        String safeDateString = dateString.replace(":", "_");
+
+        // Concatenar el timestamp con el nombre del archivo
+        String fileName = safeDateString + ".txt";
+
+        Logger logger = new Logger(fileName);
         try {
             String token = TokenService.getToken();
-            Logger.log("Obtained token: " + token);
-            System.out.println("Obtained token: \n");
-            System.out.println(token);
+            logger.log("Obtained token.");
             
             var documents = DocumentService.getDocuments(token);
-            Logger.log("Obtained document list");
-            System.out.println("Obtained document list \n");
-            
+            logger.log("Obtained document list");
+
             for (var document : documents) {
-                System.out.println("Entrando al bucle \n");
                 String base64Document = DocumentService.getDocumentContent(token, document.getId());
-                Logger.log("Obtained document content for ID: " + document.getId());
-                System.out.println("Obtained document content for ID: \n");
-                
-                boolean isUploaded = AlfrescoService.uploadDocument(base64Document, document.getDocumentoNombre(), document.getSpcSolRutTitular(), document.getSpcSolSinNpoliza(), document.getDocumentoTipoSolicitud(), document.getDocumentoTipoArchivo());
-                if (isUploaded) {
-                    Logger.log("Uploaded document ID: " + document.getId());
-                    System.out.println("Uploaded document ID \n");
-                    DocumentService.setDocumentProcessed(document.getId(), document.getFilePath());
-                    Logger.log("Set document as processed for ID: " + document.getId());
-                    System.out.println("Set document as processed for ID \n");
+                logger.log("Obtained document content for ID: " + document.getId());
+
+                String isUploaded = AlfrescoService.uploadDocument(base64Document, document.getDocumentoNombre(), document.getSpcSolRutTitular(), document.getSpcSolSinNpoliza(), document.getDocumentoTipoSolicitud(), document.getDocumentoTipoArchivo());
+                if (!Objects.equals(isUploaded, "")) {
+                    logger.log("Uploaded document ID: " + document.getId());
+                    DocumentService.setDocumentProcessed(document.getId(), isUploaded, token);
+                    logger.log("Set document as processed for ID: " + document.getId());
                 }
             }
         } catch (Exception e) {
-            Logger.logError("An error occurred: " + e.getMessage());
+            logger.log("An error occurred: " + e.getMessage());
             System.out.println("An error occurred:  \n");
         }
     }

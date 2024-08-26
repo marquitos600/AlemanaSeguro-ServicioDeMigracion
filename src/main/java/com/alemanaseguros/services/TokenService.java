@@ -25,10 +25,6 @@ public class TokenService {
 
         String requestBody = String.format("{\"username\":\"%s\",\"password\":\"%s\"}", username, password);
 
-        System.out.println("antes de obtener la peticion \n");
-        System.out.println("requestBody:  \n");
-        System.out.println(requestBody);
-
         HttpClient client = HttpClient.newHttpClient();
 
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
